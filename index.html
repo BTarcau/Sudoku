@@ -34,7 +34,9 @@ body{font-family:var(--body);padding-block:20px 32px;padding-left:max(16px,env(s
 header{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
 h1{font-family:var(--display);font-weight:700;font-size:1.7rem;margin:0;letter-spacing:-.01em}
 .stats{display:flex;gap:14px;font-size:.85rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.stats{flex-wrap:wrap;justify-content:flex-end;row-gap:2px}
 .stats b{color:var(--ink);font-weight:600}
+.newbest{color:var(--good);font-weight:600}
 .levels{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;background:var(--paper);padding:4px;border-radius:10px;border:1px solid var(--line)}
 .levels button{font:500 .9rem var(--body);border:0;background:transparent;color:var(--muted);padding:8px 0;border-radius:7px;cursor:pointer}
 .levels button[aria-pressed="true"]{background:var(--accent);color:#fff}
@@ -116,7 +118,7 @@ kbd{font-family:var(--body);font-size:.7rem;border:1px solid var(--line);border-
 <div class="wrap">
   <header>
     <h1>Sudoku</h1>
-    <div class="stats"><span>Time <b id="timer">0:00</b></span><span>Mistakes <b id="mist">0</b></span></div>
+    <div class="stats"><span>Time <b id="timer">0:00</b></span><span>Mistakes <b id="mist">0</b></span><span>Best <b id="best">–</b></span></div>
   </header>
 
   <div class="levels" role="group" aria-label="Difficulty">
@@ -220,6 +222,8 @@ function newGame(level){
   save();render();startTimer();
 }
 
+function getBests(){try{return JSON.parse(localStorage.getItem('sudoku-best'))||{};}catch(e){return {};}}
+function setBest(lv,t){const b=getBests();b[lv]=t;try{localStorage.setItem('sudoku-best',JSON.stringify(b));}catch(e){}}
 function save(){try{localStorage.setItem('sudoku-ledger',JSON.stringify(S));}catch(e){}}
 function load(){try{const s=JSON.parse(localStorage.getItem('sudoku-ledger'));if(s&&s.sol&&s.vals)return s;}catch(e){}return null;}
 
@@ -263,7 +267,9 @@ function checkWin(){
   for(let i=0;i<81;i++)if(S.vals[i]!==S.sol[i])return;
   S.done=true;
   const lv=S.level[0].toUpperCase()+S.level.slice(1);
-  $('bannerText').textContent=lv+' in '+fmt(S.time)+' with '+S.mistakes+' mistake'+(S.mistakes===1?'':'s')+'.';
+  const prev=getBests()[S.level];const isBest=prev==null||S.time<prev;
+  if(isBest)setBest(S.level,S.time);
+  $('bannerText').innerHTML=lv+' in '+fmt(S.time)+' with '+S.mistakes+' mistake'+(S.mistakes===1?'':'s')+'. '+(isBest?'<span class="newbest">New best time!</span>':'Best: '+fmt(prev)+'.');
   $('banner').hidden=false;
 }
 
@@ -303,7 +309,7 @@ function render(){
   padEl.classList.toggle('notesmode',notesMode);
   $('notesBtn').setAttribute('aria-pressed',notesMode);$('notesTag').textContent=notesMode?'on':'off';
   document.querySelectorAll('.levels button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.lv===S.level));
-  $('timer').textContent=fmt(S.time);$('mist').textContent=S.mistakes;
+  $('timer').textContent=fmt(S.time);$('mist').textContent=S.mistakes;{const bt=getBests()[S.level];$('best').textContent=bt==null?'–':fmt(bt);}
 }
 
 // Controls
